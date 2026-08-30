@@ -13,6 +13,18 @@ interface AdminUserRow {
   emailVerified?: boolean;
 }
 
+interface AdminUserApiItem {
+  id?: string | number | null;
+  username?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  provider?: string;
+  enabled?: boolean;
+  hasPassword?: boolean;
+  emailVerified?: boolean;
+}
+
 // Roles fijos en datos, sin UI de edición de rol.
 
 function Users() {
@@ -35,7 +47,7 @@ function Users() {
           headers: { Authorization: `Bearer ${token}` },
         });
         // Esperado: { success, message, data: UserProfileResponse[] }
-        const data = (res.data?.data || []) as Array<any>;
+        const data = (res.data?.data || []) as AdminUserApiItem[];
         const mapped: AdminUserRow[] = data.map((u) => ({
           id: String(u.id ?? crypto.randomUUID()),
           username: String(u.username || ""),
@@ -48,7 +60,7 @@ function Users() {
           emailVerified: Boolean(u.emailVerified),
         }));
         if (mounted && mapped.length) setUsers(mapped);
-      } catch (_) {
+      } catch {
         if (mounted) setLoadError(true);
       }
     })();

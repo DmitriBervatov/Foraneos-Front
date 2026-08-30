@@ -1,6 +1,9 @@
 import { api } from "@/core/api/api";
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+
+type BarStyle = CSSProperties & { "--bar-h": string };
 
 function Dashboard() {
   const [productCount, setProductCount] = useState<number | null>(null);
@@ -14,9 +17,9 @@ function Dashboard() {
     (async () => {
       try {
         const res = await api.get("/api/v1/products");
-        const list = (res.data?.data || []) as any[];
+        const list = (res.data?.data || []) as unknown[];
         if (mounted) setProductCount(Array.isArray(list) ? list.length : null);
-      } catch (_) {
+      } catch {
         // silencioso: mantener mock si falla
       }
     })();
@@ -44,7 +47,7 @@ function Dashboard() {
         let count = 0;
         for (const o of orders) {
           if (!o?.date) continue;
-          const d = new Date(o.date as any);
+          const d = new Date(o.date);
           if (
             d.getFullYear() === today.getFullYear() &&
             d.getMonth() === today.getMonth() &&
@@ -58,7 +61,7 @@ function Dashboard() {
           setOrdersTodayTotal(total);
           setOrdersCount(count);
         }
-      } catch (_) {
+      } catch {
         // silencioso
       }
     })();
@@ -77,9 +80,11 @@ function Dashboard() {
         const res = await api.get("/api/v1/users/admin", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const list = (res.data?.data || []) as any[];
+        const list = (res.data?.data || []) as unknown[];
         if (mounted) setUsersCount(Array.isArray(list) ? list.length : null);
-      } catch (_) {}
+      } catch {
+        // Silencioso: el panel conserva el valor vacío si falla la consulta.
+      }
     })();
     return () => {
       mounted = false;
@@ -194,11 +199,13 @@ function Dashboard() {
                     >
                       <div
                         className="w-full bg-red-300/70 group-hover:bg-red-400 transition-[height,background-color] duration-700 ease-out rounded-md"
-                        style={{
-                          height: 0,
-                          animation: `growBar 800ms ${delay}ms forwards`,
-                          ["--bar-h" as any]: `${h}px`,
-                        }}
+                        style={
+                          {
+                            height: 0,
+                            animation: `growBar 800ms ${delay}ms forwards`,
+                            "--bar-h": `${h}px`,
+                          } as BarStyle
+                        }
                         aria-label={`${d.label}: S/ ${d.value}`}
                         title={`${d.label}: S/ ${d.value}`}
                       />

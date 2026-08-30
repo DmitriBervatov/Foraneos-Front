@@ -24,6 +24,26 @@ interface ProductIngredientForm {
   quantity: number;
 }
 
+interface CategoryApiItem {
+  id?: number;
+  categoryId?: number;
+  name?: string;
+  categoryName?: string;
+}
+
+interface IngredientApiItem {
+  id?: number;
+  ingredientId?: number;
+  name?: string;
+  unitId?: number;
+}
+
+interface ProductIngredientApiItem {
+  ingredientId?: number;
+  id?: number;
+  quantity?: number;
+}
+
 // CRUD básico de productos según backend (name, price, imageUrl, categoryId)
 
 function formatPrice(n: number) {
@@ -66,7 +86,7 @@ function Products() {
           categoryName: p.categoryName,
         }));
         if (mounted && mapped.length) setProducts(mapped);
-      } catch (err) {
+      } catch {
         // Silencioso: mantener datos simulados si falla
       }
     })();
@@ -85,25 +105,27 @@ function Products() {
           api.get("ingredients"),
         ]);
         if (mounted && catRes.status === "fulfilled") {
-          const cats = (catRes.value.data?.data || []) as Array<any>;
+          const cats = (catRes.value.data?.data || []) as CategoryApiItem[];
           setCategories(
-            cats.map((c: any) => ({
+            cats.map((c) => ({
               id: Number(c.id ?? c.categoryId),
               name: String(c.name ?? c.categoryName ?? ""),
             }))
           );
         }
         if (mounted && ingRes.status === "fulfilled") {
-          const ings = (ingRes.value.data?.data || []) as Array<any>;
+          const ings = (ingRes.value.data?.data || []) as IngredientApiItem[];
           setIngredientOpts(
-            ings.map((i: any) => ({
+            ings.map((i) => ({
               id: Number(i.id ?? i.ingredientId),
               name: String(i.name ?? ""),
               unitId: Number(i.unitId ?? 0),
             }))
           );
         }
-      } catch (_) {}
+      } catch {
+        // Silencioso: estas opciones auxiliares no impiden mostrar la página.
+      }
     })();
     return () => {
       mounted = false;
@@ -151,19 +173,16 @@ function Products() {
         const res = await api.get(`/api/v1/products/${p.id}`);
         const detail = res.data?.data as
           | {
-              ingredients?: Array<{
-                ingredientId?: number;
-                id?: number;
-                quantity?: number;
-              }>;
+              ingredients?: ProductIngredientApiItem[];
             }
           | undefined;
-        if (detail?.ingredients) {
+        const ingredients = detail?.ingredients;
+        if (ingredients) {
           setForm((prev) =>
             prev
               ? {
                   ...prev,
-                  ingredients: detail.ingredients!.map((it: any) => ({
+                  ingredients: ingredients.map((it) => ({
                     ingredientId: Number(it.ingredientId ?? it.id),
                     quantity: Number(it.quantity ?? 0),
                   })),
@@ -171,7 +190,9 @@ function Products() {
               : prev
           );
         }
-      } catch (_) {}
+      } catch {
+        // Silencioso: se mantiene el formulario sin ingredientes si falla.
+      }
     })();
   }
 
@@ -189,8 +210,8 @@ function Products() {
     if (!current.categoryId || Number(current.categoryId) <= 0)
       e.categoryId = "Categoría obligatoria";
     if (
-      (current as any).imageUrl &&
-      !/^https?:\/\//i.test((current as any).imageUrl)
+      current.imageUrl &&
+      !/^https?:\/\//i.test(current.imageUrl)
     )
       e.imageUrl = "URL de imagen inválida";
     return e;
@@ -270,7 +291,7 @@ function Products() {
         }))
       );
       cancelForm();
-    } catch (_) {
+    } catch {
       // ignore
     }
   }
@@ -284,7 +305,9 @@ function Products() {
         headers ? { headers } : undefined
       );
       setProducts((prev) => prev.filter((p) => p.id !== id));
-    } catch (_) {}
+    } catch {
+      // Silencioso: la lista se conserva si el backend rechaza la eliminación.
+    }
   }
 
   // No aplica en backend actual
