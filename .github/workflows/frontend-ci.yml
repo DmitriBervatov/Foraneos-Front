@@ -1,0 +1,67 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, pruebas y compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar ESLint
+        run: npm run lint
+
+      - name: Ejecutar pruebas automatizadas
+        run: npm test
+
+      - name: Compilar para producción
+        run: npm run build
+
+  container:
+    name: Imagen Docker y health check
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Construir imagen Docker
+        run: docker build --tag central-front:ci .
+
+      - name: Iniciar contenedor
+        run: docker run --detach --name central-front-ci --publish 8080:80 central-front:ci
+
+      - name: Comprobar estado del frontend
+        run: curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8080/health
+
+      - name: Eliminar contenedor de validación
+        if: always()
+        continue-on-error: true
+        run: docker rm --force central-front-ci
