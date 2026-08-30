@@ -59,7 +59,7 @@ jobs:
         run: docker run --detach --name central-front-ci --publish 8080:80 central-front:ci
 
       - name: Comprobar estado del frontend
-        run: curl --retry 10 --retry-delay 2 --retry-connrefused --fail http://localhost:8080/health
+        run: curl --retry 10 --retry-delay 2 --retry-all-errors --fail --silent --show-error http://localhost:8080/health
 
       - name: Eliminar contenedor de validación
         if: always()
